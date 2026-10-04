@@ -3,526 +3,136 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Word Count</title>
-  <style>
-    /*
-      Design decisions (antislop R-31):
-      - System font stack: no external loads, feels native.
-      - Light theme only: daytime productivity tool.
-      - Single accent: #0d9488 (teal-600). Used on toggle and active states only.
-      - No navbar/footer/sections: one screen, one job.
-      - Large textarea as focal point: the text input IS the product.
-      - Dials: ENERGY 1 / RHYTHM 1 / MOTION 1 (utility tool, draft without direction).
-    */
-
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html {
-      font-size: 16px;
-      -webkit-text-size-adjust: 100%;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: #f8f8f8;
-      color: #1a1a1a;
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem 1rem 3rem;
-      line-height: 1.5;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 720px;
-    }
-
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 1.25rem;
-      color: #1a1a1a;
-      letter-spacing: -0.01em;
-    }
-
-    .subtitle {
-      font-size: 0.8125rem;
-      color: #666;
-      margin-top: -0.75rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .editor {
-      position: relative;
-      width: 100%;
-    }
-
-    .backdrop {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 1rem;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-size: 1rem;
-      line-height: 1.7;
-      color: #1a1a1a;
-      background: #fff;
-      border: 1.5px solid transparent;
-      border-radius: 6px;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      pointer-events: none;
-      display: none;
-    }
-
-    .backdrop mark {
-      background: #ccfbf1;
-      color: #0f766e;
-      font-weight: 600;
-      border-radius: 2px;
-      padding: 0 1px;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 280px;
-      padding: 1rem;
-      font-family: inherit;
-      font-size: 1rem;
-      line-height: 1.7;
-      color: #1a1a1a;
-      background: #fff;
-      border: 1.5px solid #d4d4d4;
-      border-radius: 6px;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.15s;
-      position: relative;
-    }
-
-    textarea.highlighting {
-      color: transparent;
-      caret-color: #1a1a1a;
-      background: transparent;
-    }
-
-    textarea:focus {
-      border-color: #0d9488;
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
-    }
-
-    textarea::placeholder {
-      color: #767676;
-    }
-
-    .controls {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-
-    .toggle-group {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .toggle-group label {
-      font-size: 0.875rem;
-      color: #404040;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    /* Toggle switch */
-    .switch {
-      position: relative;
-      width: 40px;
-      height: 22px;
-      flex-shrink: 0;
-    }
-
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-      position: absolute;
-    }
-
-    .switch .track {
-      position: absolute;
-      inset: 0;
-      background: #c4c4c4;
-      border-radius: 11px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .switch .track::after {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 18px;
-      height: 18px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform 0.15s;
-    }
-
-    .switch input:checked + .track {
-      background: #0d9488;
-    }
-
-    .switch input:checked + .track::after {
-      transform: translateX(18px);
-    }
-
-    .switch input:focus-visible + .track {
-      outline: 2px solid #0d9488;
-      outline-offset: 2px;
-    }
-
-    .btn-clear {
-      font-family: inherit;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      padding: 0.4rem 1rem;
-      color: #555;
-      background: #fff;
-      border: 1.5px solid #d4d4d4;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-      min-height: 44px;
-      min-width: 44px;
-    }
-
-    .btn-clear:hover {
-      border-color: #999;
-      color: #1a1a1a;
-    }
-
-    .btn-clear:focus-visible {
-      outline: 2px solid #0d9488;
-      outline-offset: 2px;
-    }
-
-    .btn-clear:active {
-      background: #f0f0f0;
-    }
-
-    .stats {
-      margin-bottom: 1rem;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 0.75rem;
-    }
-
-    .stat-card {
-      background: #fff;
-      border: 1.5px solid #e5e5e5;
-      border-radius: 6px;
-      padding: 0.875rem 1rem;
-    }
-
-    .stat-card .value {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #1a1a1a;
-      line-height: 1.2;
-    }
-
-    .stat-card .label {
-      font-size: 0.8125rem;
-      color: #666;
-      margin-top: 0.125rem;
-    }
-
-    .citation-info {
-      margin-top: 0.75rem;
-      font-size: 0.8125rem;
-      color: #666;
-      min-height: 1.25rem;
-    }
-
-    .citation-info .count {
-      color: #0d9488;
-      font-weight: 600;
-    }
-
-    .citation-list {
-      margin-top: 0.5rem;
-    }
-
-    .citation-list summary {
-      font-size: 0.8125rem;
-      color: #404040;
-      cursor: pointer;
-      user-select: none;
-      padding: 0.25rem 0;
-    }
-
-    .citation-list summary:focus-visible {
-      outline: 2px solid #0d9488;
-      outline-offset: 2px;
-    }
-
-    .citation-list ul {
-      list-style: none;
-      padding: 0;
-      margin: 0.375rem 0 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .citation-list li {
-      font-size: 0.8125rem;
-      color: #1a1a1a;
-      padding: 0.375rem 0.625rem;
-      background: #f0fdfa;
-      border: 1px solid #ccfbf1;
-      border-radius: 4px;
-    }
-
-    @media (max-width: 480px) {
-      body {
-        padding: 1.25rem 0.75rem 2rem;
-      }
-
-      h1 {
-        font-size: 1.25rem;
-      }
-
-      textarea {
-        min-height: 200px;
-        font-size: 1rem;
-      }
-
-      .stats {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-  </style>
+  <title>Academic Word Counter with Citation Exclusion</title>
+  <meta name="description" content="Count words in essays and papers with automated exclusion for APA, Harvard, IEEE, and MLA in-text citations.">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Word Count</h1>
-    <p class="subtitle">special built for Ivena, by Stefan ❤️</p>
+  <main class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="title-row">
+        <h1>Academic Word Counter</h1>
+        <span class="version-tag">APA · Harvard · IEEE · MLA</span>
+      </div>
+      <p class="subtitle">
+        Special built for <span class="dedication">Ivena</span>, by Stefan ❤️
+      </p>
+    </header>
 
-    <div class="stats" aria-live="polite">
-      <div class="stat-card">
-        <div class="value" id="word-count">0</div>
-        <div class="label">Words</div>
-      </div>
-      <div class="stat-card">
-        <div class="value" id="char-count">0</div>
-        <div class="label">Characters</div>
-      </div>
-      <div class="stat-card">
-        <div class="value" id="char-no-space">0</div>
-        <div class="label">Characters (no spaces)</div>
-      </div>
-      <div class="stat-card">
-        <div class="value" id="sentence-count">0</div>
-        <div class="label">Sentences</div>
-      </div>
-    </div>
+    <!-- Dashboard: Key Metrics -->
+    <section class="dashboard" aria-label="Word count statistics">
+      <div class="stats-grid">
+        <div class="stat-card primary">
+          <div class="stat-label">Net Count (Excl. Citations)</div>
+          <div class="stat-value" id="stat-net-words">0</div>
+          <div class="stat-sub">Words counted for submission</div>
+        </div>
 
-    <div class="editor">
-      <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+        <div class="stat-card">
+          <div class="stat-label">Gross Words</div>
+          <div class="stat-value" id="stat-gross-words">0</div>
+          <div class="stat-sub">Total in editor</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Citations Excluded</div>
+          <div class="stat-value" id="stat-excluded-words">-0</div>
+          <div class="stat-sub" id="stat-citations-count">0 detected</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Reading Time</div>
+          <div class="stat-value" id="stat-reading-time">0 min</div>
+          <div class="stat-sub">At 200 words/min</div>
+        </div>
+      </div>
+
+      <!-- Secondary Inline Statistics & Goal Limit -->
+      <div class="secondary-stats">
+        <div class="stat-inline-group">
+          <div class="stat-inline">Characters: <span id="stat-chars-space">0</span></div>
+          <div class="stat-inline">No spaces: <span id="stat-chars-nospace">0</span></div>
+          <div class="stat-inline">Sentences: <span id="stat-sentences">0</span></div>
+        </div>
+
+        <div class="goal-tracker">
+          <div class="goal-input-wrapper">
+            <label for="goal-limit">Word limit:</label>
+            <input type="number" id="goal-limit" class="goal-input" placeholder="e.g. 2000" min="0" step="50" aria-label="Assignment word limit target">
+          </div>
+          <span class="goal-badge" id="goal-badge">No limit set</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toolbar: Controls & Filters -->
+    <section class="toolbar" aria-label="Editor controls">
+      <div class="toolbar-left">
+        <label class="switch-label" for="exclude-citations">
+          <span class="switch">
+            <input type="checkbox" id="exclude-citations" role="switch" checked aria-label="Exclude academic citations from count">
+            <span class="track" aria-hidden="true"></span>
+          </span>
+          <span>Exclude citations</span>
+        </label>
+
+        <div class="style-select-wrapper">
+          <label for="style-filter">Style:</label>
+          <select id="style-filter" class="style-select" aria-label="Academic citation style filter">
+            <option value="all">All Styles (Auto-detect)</option>
+            <option value="author-date">Author-Date (APA / Harvard / Chicago)</option>
+            <option value="numeric">Numeric (IEEE / Vancouver / ACM)</option>
+            <option value="author-page">Author-Page (MLA)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="toolbar-right">
+        <button type="button" class="btn" id="btn-copy-clean" title="Copy text with citations excluded">
+          Copy Clean Text
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-load-sample" title="Load sample academic text with multiple citations">
+          Sample
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-clear" title="Clear text">
+          Clear
+        </button>
+      </div>
+    </section>
+
+    <!-- Editor Canvas with Precision Highlight Overlay -->
+    <div class="editor-wrapper">
+      <div class="editor-backdrop" id="editor-backdrop" aria-hidden="true"></div>
       <textarea
         id="text-input"
-        placeholder="Paste or type your text here..."
-        aria-label="Text input for word counting"
+        placeholder="Paste your essay, thesis, or academic paper here..."
+        aria-label="Academic paper text input"
         autofocus
+        spellcheck="false"
       ></textarea>
     </div>
 
-    <div class="controls">
-      <div class="toggle-group">
-        <label class="switch" for="exclude-citations">
-          <input type="checkbox" id="exclude-citations" role="switch" aria-label="Exclude citations from word count">
-          <span class="track" aria-hidden="true"></span>
-        </label>
-        <label for="exclude-citations">Exclude citations</label>
+    <!-- Collapsible Citation Inspector -->
+    <details class="citation-panel" id="citation-panel" style="display: none;">
+      <summary>
+        <div class="summary-left">
+          <span>Detected Citations</span>
+          <span class="badge-count" id="citation-badge">0</span>
+        </div>
+        <span class="summary-toggle-icon">▼</span>
+      </summary>
+      <div class="citation-list-body" id="citation-list-body">
+        <!-- Rendered dynamically by app.js -->
       </div>
-      <button type="button" class="btn-clear" id="btn-clear">Clear</button>
-    </div>
-
-    <div class="citation-info" id="citation-info" aria-live="polite"></div>
-    <details class="citation-list" id="citation-list" style="display:none">
-      <summary>Detected citations</summary>
-      <ul id="citation-items"></ul>
     </details>
-  </div>
+  </main>
 
-  <script>
-    const textInput = document.getElementById('text-input');
-    const backdropEl = document.getElementById('backdrop');
-    const excludeToggle = document.getElementById('exclude-citations');
-    const btnClear = document.getElementById('btn-clear');
-    const wordCountEl = document.getElementById('word-count');
-    const charCountEl = document.getElementById('char-count');
-    const charNoSpaceEl = document.getElementById('char-no-space');
-    const sentenceCountEl = document.getElementById('sentence-count');
-    const citationInfoEl = document.getElementById('citation-info');
-    const citationListEl = document.getElementById('citation-list');
-    const citationItemsEl = document.getElementById('citation-items');
+  <!-- Non-intrusive Toast Notification -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    // Build citation regex from parts for readability.
-    const _particle = '(?:de|van|von|del|di|la|le|lo|den|der|du|da|dos|das)';
-    const _initial = '(?:[A-Z]\\.\\s*)';
-    const _surname = '[A-Z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F\'\\u2019-]*';
-    const _authorName = '(?:' + _initial + '*(?:' + _particle + '\\s+)?' + _surname + '|' + _initial + '*' + _particle + ')';
-    const _authorList = _authorName
-      + '(?:\\s*,\\s*' + _authorName + ')*'
-      + '(?:\\s*,?\\s*(?:&|and)\\s*' + _authorName + ')?'
-      + '(?:\\s*,?\\s*et\\s+al\\.?)?';
-    const _prefix = '(?:(?:see|e\\.g\\.|cf\\.|i\\.e\\.)\\s+)?';
-    const _yearPage = '\\d{4}(?:\\s*,\\s*(?:pp?\\.\\s*\\d+(?:\\s*[-\\u2013]\\s*\\d+)?))?';
-    const _entry = _prefix + _authorList + '\\s*,\\s*' + _yearPage;
-    const CITATION_PATTERN = new RegExp(
-      '\\(\\s*' + _entry + '(?:\\s*;\\s*' + _entry + ')*\\s*\\)', 'g'
-    );
-
-    function findCitations(text) {
-      const matches = [];
-      let m;
-      CITATION_PATTERN.lastIndex = 0;
-      while ((m = CITATION_PATTERN.exec(text)) !== null) {
-        matches.push(m[0]);
-      }
-      return matches;
-    }
-
-    function stripCitations(text) {
-      CITATION_PATTERN.lastIndex = 0;
-      const citations = findCitations(text);
-      CITATION_PATTERN.lastIndex = 0;
-      const stripped = text.replace(CITATION_PATTERN, '');
-      return { stripped, citations };
-    }
-
-    function countWords(text) {
-      const trimmed = text.trim();
-      if (trimmed === '') return 0;
-      return trimmed.split(/\s+/).length;
-    }
-
-    function countSentences(text) {
-      const trimmed = text.trim();
-      if (trimmed === '') return 0;
-      const matches = trimmed.match(/[^.!?]*[.!?]+(?:\s|$)/g);
-      return matches ? matches.length : (trimmed.length > 0 ? 1 : 0);
-    }
-
-    function escapeHtml(str) {
-      const el = document.createElement('span');
-      el.textContent = str;
-      return el.innerHTML;
-    }
-
-    function buildHighlightedHtml(text) {
-      CITATION_PATTERN.lastIndex = 0;
-      const parts = [];
-      let lastIndex = 0;
-      let m;
-      while ((m = CITATION_PATTERN.exec(text)) !== null) {
-        if (m.index > lastIndex) {
-          parts.push(escapeHtml(text.substring(lastIndex, m.index)));
-        }
-        parts.push('<mark>' + escapeHtml(m[0]) + '</mark>');
-        lastIndex = m.index + m[0].length;
-      }
-      if (lastIndex < text.length) {
-        parts.push(escapeHtml(text.substring(lastIndex)));
-      }
-      // trailing newline so the backdrop height matches the textarea
-      return parts.join('') + '\n';
-    }
-
-    function syncScroll() {
-      backdropEl.scrollTop = textInput.scrollTop;
-      backdropEl.scrollLeft = textInput.scrollLeft;
-    }
-
-    function update() {
-      const raw = textInput.value;
-      const excluding = excludeToggle.checked;
-
-      let textForCounting = raw;
-      let citations = [];
-
-      if (excluding) {
-        const result = stripCitations(raw);
-        textForCounting = result.stripped;
-        citations = result.citations;
-
-        backdropEl.innerHTML = buildHighlightedHtml(raw);
-        backdropEl.style.display = 'block';
-        textInput.classList.add('highlighting');
-        syncScroll();
-      } else {
-        backdropEl.style.display = 'none';
-        backdropEl.innerHTML = '';
-        textInput.classList.remove('highlighting');
-      }
-
-      const words = countWords(textForCounting);
-      const chars = textForCounting.length;
-      const charsNoSpace = textForCounting.replace(/\s/g, '').length;
-      const sentences = countSentences(textForCounting);
-
-      wordCountEl.textContent = words;
-      charCountEl.textContent = chars;
-      charNoSpaceEl.textContent = charsNoSpace;
-      sentenceCountEl.textContent = sentences;
-
-      if (excluding && citations.length > 0) {
-        citationInfoEl.innerHTML =
-          '<span class="count">' + citations.length + '</span> citation' +
-          (citations.length === 1 ? '' : 's') + ' excluded from count';
-
-        citationItemsEl.innerHTML = citations.map(function(c) {
-          return '<li>' + escapeHtml(c) + '</li>';
-        }).join('');
-        citationListEl.style.display = '';
-      } else if (excluding && raw.trim() !== '') {
-        citationInfoEl.textContent = 'No citations detected';
-        citationListEl.style.display = 'none';
-        citationItemsEl.innerHTML = '';
-      } else {
-        citationInfoEl.textContent = '';
-        citationListEl.style.display = 'none';
-        citationItemsEl.innerHTML = '';
-      }
-    }
-
-    textInput.addEventListener('input', update);
-    textInput.addEventListener('scroll', syncScroll);
-    excludeToggle.addEventListener('change', update);
-
-    btnClear.addEventListener('click', function() {
-      textInput.value = '';
-      update();
-      textInput.focus();
-    });
-
-    update();
-  </script>
+  <!-- Scripts: Modular structure -->
+  <script src="js/parser.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
